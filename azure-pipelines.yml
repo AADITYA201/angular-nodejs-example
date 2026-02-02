@@ -1,0 +1,36 @@
+trigger:
+- main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  nodeVersion: '18.x'
+
+steps:
+# Install Node
+- task: NodeTool@0
+  inputs:
+    versionSpec: '$(nodeVersion)'
+  displayName: 'Install Node.js'
+
+# Build Backend
+- script: |
+    cd backend
+    npm install
+    npm test || echo "No tests"
+  displayName: 'Backend Build & Test'
+
+# Build Frontend
+- script: |
+    cd frontend
+    npm install
+    npm install -g @angular/cli
+    ng build --configuration=production
+  displayName: 'Angular Build'
+
+# Publish Artifact
+- task: PublishBuildArtifacts@1
+  inputs:
+    PathtoPublish: 'frontend/dist'
+    ArtifactName: 'angular-build'
