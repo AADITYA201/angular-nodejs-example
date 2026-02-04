@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: angular-nodejs-example
+  namespace: dev
+  labels:
+    app: angular-nodejs-example
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: angular-nodejs-example
+  template:
+    metadata:
+      labels:
+        app: angular-nodejs-example
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3080"
+    spec:
+      containers:
+        - name: angular-nodejs-example
+          image: myacr.azurecr.io/angular-nodejs-example:latest
+          ports:
+            - containerPort: 3080
+          env:
+            - name: NODE_ENV
+              value: "production"
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3080
+            initialDelaySeconds: 15
+            periodSeconds: 20
