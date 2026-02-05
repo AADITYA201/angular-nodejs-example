@@ -2,7 +2,7 @@ trigger:
 - main
 
 pool:
-  vmImage: 'ubuntu-latest'
+  vmImage: ubuntu-latest
 
 variables:
   nodeVersion: '18.x'
@@ -11,49 +11,35 @@ steps:
 # Install Node
 - task: NodeTool@0
   inputs:
-    versionSpec: '$(nodeVersion)'
-  displayName: 'Install Node.js'
+    versionSpec: $(nodeVersion)
+  displayName: Install Node.js
 
-# Backend build
+# Build Backend
 - script: |
     cd backend
     npm install
-  displayName: 'Backend Build'
+  displayName: Backend Build
 
-# Frontend build
+# Build Angular
 - script: |
     cd frontend
     npm install
     npm install -g @angular/cli
-    ng build --configuration=production
-  displayName: 'Angular Build'
+    ng build --configuration production
+  displayName: Angular Build
 
-# Publish full app
-- task: PublishBuildArtifacts@1
+# Copy Angular build to VM
+- task: CopyFilesOverSSH@0
   inputs:
-    PathtoPublish: '$(Build.SourcesDirectory)'
-    ArtifactName: 'app'
+    sshEndpoint: azure-vm-ssh
+    sourceFolder: 'frontend/dist'
+    contents: '**'
+    targetFolder: '/var/www/html'
 
-# DEPLOYMENT 
-
-- task: DownloadBuildArtifacts@0
-  inputs:
-    artifactName: 'app'
-
+# Restart Nginx
 - task: SSH@0
   inputs:
-    sshEndpoint: 'azure-vm-ssh'
+    sshEndpoint: azure-vm-ssh
     runOptions: inline
     inline: |
-      echo "Deploying Angular..."
-      rm -rf /var/www/html/*
-      cp -r frontend/dist/* /var/www/html/
-
-      echo "Deploying Node backend..."
-      cd /opt/node-app
-      rm -rf *
-      cp -r backend/* .
-
-      npm install
-      pm2 restart node-api || pm2 start app.js --name node-api
-      pm2 save
+      sudo systemctl restart nginx
