@@ -1,0 +1,45 @@
+trigger:
+- main
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  nodeVersion: '18.x'
+
+steps:
+# Install Node
+- task: NodeTool@0
+  inputs:
+    versionSpec: $(nodeVersion)
+  displayName: Install Node.js
+
+# Build Backend
+- script: |
+    cd backend
+    npm install
+  displayName: Backend Build
+
+# Build Angular
+- script: |
+    cd frontend
+    npm install
+    npm install -g @angular/cli
+    ng build --configuration production
+  displayName: Angular Build
+
+# Copy Angular build to VM
+- task: CopyFilesOverSSH@0
+  inputs:
+    sshEndpoint: azure-vm-ssh
+    sourceFolder: 'frontend/dist'
+    contents: '**'
+    targetFolder: '/var/www/html'
+
+# Restart Nginx
+- task: SSH@0
+  inputs:
+    sshEndpoint: azure-vm-ssh
+    runOptions: inline
+    inline: |
+      sudo systemctl restart nginx
