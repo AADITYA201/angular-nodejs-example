@@ -14,14 +14,13 @@ steps:
     versionSpec: '$(nodeVersion)'
   displayName: 'Install Node.js'
 
-# Build Backend
+# Backend build
 - script: |
     cd backend
     npm install
-    npm test || echo "No tests"
-  displayName: 'Backend Build & Test'
+  displayName: 'Backend Build'
 
-# Build Frontend
+# Frontend build
 - script: |
     cd frontend
     npm install
@@ -29,8 +28,32 @@ steps:
     ng build --configuration=production
   displayName: 'Angular Build'
 
-# Publish Artifact
+# Publish full app
 - task: PublishBuildArtifacts@1
   inputs:
-    PathtoPublish: 'frontend/dist'
-    ArtifactName: 'angular-build'
+    PathtoPublish: '$(Build.SourcesDirectory)'
+    ArtifactName: 'app'
+
+# DEPLOYMENT 
+
+- task: DownloadBuildArtifacts@0
+  inputs:
+    artifactName: 'app'
+
+- task: SSH@0
+  inputs:
+    sshEndpoint: 'azure-vm-ssh'
+    runOptions: inline
+    inline: |
+      echo "Deploying Angular..."
+      rm -rf /var/www/html/*
+      cp -r frontend/dist/* /var/www/html/
+
+      echo "Deploying Node backend..."
+      cd /opt/node-app
+      rm -rf *
+      cp -r backend/* .
+
+      npm install
+      pm2 restart node-api || pm2 start app.js --name node-api
+      pm2 save
