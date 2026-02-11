@@ -2,7 +2,7 @@ trigger:
 - main
 
 pool:
-  vmImage: ubuntu-latest
+  vmImage: self-hosted-linux
 
 variables:
   nodeVersion: '18.x'
